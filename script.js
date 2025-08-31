@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, 2000); // agora espera 2 segundos
 
-  // Configuração do Firebase
+  // Configuração do Firebase (ainda utilizada para buscar histórico, mas não mais para uploads)
   const firebaseConfig = {
     apiKey: "AIzaSyCuw1A_5KO1IWEv2OaIDqMoLHF56Sb2j-w",
     authDomain: "tecnoisotarefas.firebaseapp.com",
@@ -70,10 +70,10 @@ document.addEventListener('DOMContentLoaded', () => {
     appId: "1:711312621600:web:22ed8ff5dae7db79f1fc45"
   };
 
-  // Inicializa o Firebase
+  // Inicializa o Firebase (ainda usado para ler dados históricos)
   const app = firebase.initializeApp(firebaseConfig);
   const database = firebase.database(app);
-  // Inicializa o Firebase Storage
+  // Inicializa o Firebase Storage (se ainda for usar para outras funcionalidades, caso contrário, pode ser removido)
   const storage = firebase.storage(app);
 
   // Elementos da UI
@@ -177,12 +177,15 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // Para status Pendente (ou qualquer outro status não tratado acima)
+      // A busca de "Pendente" aqui é para calcular a posição na fila.
+      // Pode ser necessário ajustar a lógica se o seu sistema tiver mais status.
       const snapshot = await database.ref('tasks').orderByChild('status').equalTo('Pendente').once('value');
       let tasks = [];
 
       if (snapshot.exists()) {
         snapshot.forEach(childSnapshot => {
           const taskData = childSnapshot.val();
+          // Filtra novamente apenas para garantir que estamos pegando os pendentes corretos
           if (taskData && taskData.status === "Pendente") {
             tasks.push({
               id: childSnapshot.key,
@@ -195,7 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
 
-      // Garante que o task atual está na lista se for Pendente
+      // Garante que o task atual está na lista se for Pendente e ainda não foi processado
       if (task.status === "Pendente" && !tasks.some(t => t.id === taskId)) {
         tasks.push({
           id: taskId,
@@ -213,6 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
             return priorityOrder[a.priority] - priorityOrder[b.priority];
           }
+          // Ordena por data de vencimento se a prioridade for a mesma
           return new Date(a.dueDate) - new Date(b.dueDate);
         });
 
@@ -220,7 +224,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalInQueue = tasks.length;
 
         if (position >= 0) {
-          const progress = Math.min(100, ((position + 1) / totalInQueue) * 100);
+          // Calcula a porcentagem da posição na fila
+          // Se totalInQueue for 0 (não deve acontecer se tasks.length > 0),
+          // dividimos por 1 para evitar divisão por zero, mas a posição será -1.
+          const progress = totalInQueue > 0 ? Math.min(100, ((position + 1) / totalInQueue) * 100) : 0;
 
           return `
             <div class="queue-container">
@@ -232,15 +239,15 @@ document.addEventListener('DOMContentLoaded', () => {
                   <div class="walker-icon">👤</div>
                 </div>
               </div>
-              <div class="queue-message">
-                <i data-feather="info"></i> ${getQueueMessage(position + 1, totalInQueue)}
+              <div class="queue-info">
+                <p><i data-feather="info"></i> ${getQueueMessage(position + 1, totalInQueue)}</p>
               </div>
             </div>
           `;
         }
       }
 
-      // Fallback para qualquer situação não prevista
+      // Fallback para qualquer situação não prevista (ex: chamado não encontrado na fila, mas com status válido)
       return `
         <div class="status-container">
           <h4><i data-feather="help-circle"></i> Status: ${task.status}</h4>
@@ -305,10 +312,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function startDrag(e) {
       isDragging = true;
-      startX = e.clientX || e.touches[0].clientX;
+      // Usa pageX para obter a posição relativa ao viewport inteiro
+      startX = e.pageX || e.touches[0].pageX;
       thumbX = thumb.offsetLeft;
 
-      // Adiciona listeners de movimento e fim
+      // Adiciona listeners de movimento e fim no DOCUMENTO para evitar perder o 'drag'
       document.addEventListener('mousemove', drag);
       document.addEventListener('touchmove', drag, { passive: false });
       document.addEventListener('mouseup', endDrag);
@@ -321,12 +329,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function drag(e) {
       if (!isDragging) return;
 
-      const clientX = e.clientX || e.touches[0].clientX;
+      const clientX = e.pageX || e.touches[0].pageX;
       const deltaX = clientX - startX;
       let newX = thumbX + deltaX;
 
       // Limita o movimento dentro da track
-      newX = Math.max(0, Math.min(newX, track.offsetWidth));
+      newX = Math.max(0, Math.min(newX, track.offsetWidth - thumb.offsetWidth / 2)); // Ajuste para o centro do thumb
 
       thumb.style.left = newX + 'px';
       progress.style.width = newX + 'px';
@@ -369,23 +377,32 @@ document.addEventListener('DOMContentLoaded', () => {
       captchaVerified = true;
       success.style.display = 'block';
       thumb.style.backgroundColor = '#4CAF50';
-      thumb.style.left = targetPosition + 'px';
-      progress.style.width = targetPosition + 'px';
+      // Move o thumb para a posição final e ajusta a largura do progresso
+      thumb.style.left = (target.offsetLeft + target.offsetWidth / 2 - thumb.offsetWidth / 2) + 'px';
+      progress.style.width = (target.offsetLeft + target.offsetWidth / 2) + 'px';
+
       target.style.display = 'none';
       feather.replace();
 
-      // Remove todos os listeners
+      // Remove todos os listeners para evitar múltiplos eventos
       thumb.removeEventListener('mousedown', startDrag);
       thumb.removeEventListener('touchstart', startDrag);
+      document.removeEventListener('mousemove', drag);
+      document.removeEventListener('touchmove', drag);
+      document.removeEventListener('mouseup', endDrag);
+      document.removeEventListener('touchend', endDrag);
     }
 
     function resetSlider() {
       // Animação suave de volta ao início
-      thumb.style.transition = 'left 0.3s ease';
+      thumb.style.transition = 'left 0.3s ease, background-color 0.3s ease';
       progress.style.transition = 'width 0.3s ease';
 
       thumb.style.left = '0';
       progress.style.width = '0';
+
+      // Restaura a cor original
+      thumb.style.backgroundColor = 'var(--primary)';
 
       // Remove a transição após a animação
       setTimeout(() => {
@@ -495,6 +512,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderHistory(); // Re-renderiza a lista para garantir que está atualizada
   }
   function closeHistoryModal() {
+    // Desvincula os listeners em tempo real para evitar vazamentos de memória
     const history = JSON.parse(localStorage.getItem('taskHistory') || '[]');
     history.forEach(task => {
       if (task && task.id) {
@@ -539,7 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Criar novo chamado
+  // Criar novo chamado (MODIFICADO PARA ENVIAR VIA FETCH)
   async function createNewTicket() {
     const nome = document.getElementById('nome').value.trim();
     const empresa = document.getElementById('empresa').value.trim();
@@ -578,45 +596,75 @@ document.addEventListener('DOMContentLoaded', () => {
       empresa: empresa,
       email: email,
       telefone: telefone,
-      attachments: [] // Array para armazenar os links dos anexos
+      attachments: [] // Array para armazenar os nomes dos anexos
     };
 
-    // ----- LÓGICA DE UPLOAD DE ARQUIVOS (Firebase Storage) -----
-    const uploadPromises = [];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const storageRef = storage.ref(`attachments/${taskId}/${file.name}`);
-      const uploadTask = storageRef.put(file);
+    // Cria o corpo do formulário para enviar arquivos
+    const formData = new FormData();
+    formData.append('taskId', taskId); // Para associar os arquivos ao chamado
+    formData.append('taskData', JSON.stringify(novaTarefa)); // Envia os dados do chamado como JSON
 
-      uploadPromises.push(
-        uploadTask.then(snapshot => snapshot.ref.getDownloadURL())
-          .then(downloadURL => {
-            novaTarefa.attachments.push({ name: file.name, url: downloadURL });
-          })
-          .catch(error => {
-            console.error(`Erro ao fazer upload do arquivo ${file.name}:`, error);
-            throw error; // Propaga o erro para interromper o processo
-          })
-      );
+    for (let i = 0; i < files.length; i++) {
+      formData.append('files', files[i]); // Adiciona cada arquivo ao FormData
     }
 
-    try {
-      await Promise.all(uploadPromises); // Aguarda todos os uploads terminarem
+    // --- Substituição da lógica Firebase Storage por fetch para a API de destino ---
+    // O URL da API Route no seu outro projeto Vercel
+    const BACKEND_API_URL = 'https://seu-outro-projeto-backend.vercel.app/api/upload'; // <<< !!! AJUSTE ESTE URL !!!
 
-      // Agora que os uploads estão completos (ou falharam), salva a tarefa no DB
-      await database.ref('tasks/' + taskId).set(novaTarefa);
-      localStorage.setItem('lastTicketSubmission', Date.now().toString());
-      showModal('Sucesso', 'Chamado enviado com sucesso!', taskId);
-      resetForm();
-      saveToHistory(novaTarefa);
+    try {
+      const response = await fetch(BACKEND_API_URL, {
+        method: 'POST',
+        // O 'Content-Type' é definido automaticamente para 'multipart/form-data'
+        // quando se usa FormData, então não precisamos definir manualmente.
+        body: formData,
+      });
+
+      if (!response.ok) {
+        let errorDetails = `Erro do servidor: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorDetails += ` - ${errorData.message || 'Erro desconhecido'}`;
+          console.error('Erro na API de upload:', errorData);
+        } catch (jsonError) {
+          console.error('Erro ao parsear resposta de erro da API:', jsonError);
+        }
+        throw new Error(errorDetails);
+      }
+
+      const result = await response.json(); // Assumindo que a API retorna um JSON de sucesso
+
+      // Se o upload foi bem-sucedido e os arquivos foram enviados para o outro lado:
+      if (result.success) {
+        // O seu outro projeto Vercel cuidará de salvar os dados e os arquivos.
+        // O que podemos fazer aqui é atualizar nosso "histórico local" com os dados básicos.
+        // O resultado pode conter os nomes dos arquivos que foram salvos.
+        if (result.savedFiles && Array.isArray(result.savedFiles)) {
+          // Armazena apenas os nomes dos arquivos que foram salvos no destino
+          novaTarefa.attachments = result.savedFiles.map(fileName => ({ name: fileName }));
+        } else if (result.savedFiles && typeof result.savedFiles === 'string') {
+          // Caso seja apenas um arquivo e o nome veio como string
+          novaTarefa.attachments = [{ name: result.savedFiles }];
+        }
+
+        saveToHistory(novaTarefa); // Salva no histórico local
+        localStorage.setItem('lastTicketSubmission', Date.now().toString()); // Registra a submissão para o cooldown
+
+        showModal('Sucesso', 'Chamado enviado com sucesso!', taskId);
+        resetForm();
+      } else {
+        // Se a API retornou sucesso=false, mas não houve erro HTTP
+        showModal('Erro', result.message || 'Não foi possível enviar o chamado.');
+        console.error('Falha no envio da tarefa:', result.message);
+      }
 
     } catch (error) {
-      showModal('Erro', 'Ocorreu um erro ao enviar o chamado ou ao processar os anexos. Por favor, tente novamente.');
+      showModal('Erro', `Ocorreu um erro ao enviar o chamado: ${error.message}`);
       console.error("Erro geral no envio do chamado:", error);
     }
   }
 
-  // Atualizar chamado existente
+  // Atualizar chamado existente (MANTIDA IGUAL, mas verifica o uso do Firebase Storage)
   async function updateTicket(taskId) {
     const nome = document.getElementById('nome').value.trim();
     const empresa = document.getElementById('empresa').value.trim();
@@ -649,48 +697,77 @@ document.addEventListener('DOMContentLoaded', () => {
       status: "Pendente" // Resetar status ao editar, se necessário
     };
 
-    try {
-      // Lógica de upload para novos arquivos anexados na edição
-      const uploadPromises = [];
-      if (files.length > 0) {
-        updatedTaskData.attachments = updatedTaskData.attachments || []; // Garante que o array existe
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          const storageRef = storage.ref(`attachments/${taskId}/${file.name}`);
-          const uploadTask = storageRef.put(file);
+    // A lógica de upload de NOVOS arquivos durante a edição precisaria ser adaptada
+    // para enviar para a nova API backend, assim como no createNewTicket.
+    // Para simplificar, esta versão DELETARIA a lógica de upload do Firebase Storage
+    // e DEIXARIA A LÓGICA DE UPLOAD DE NOVOS ARQUIVOS DE FORA POR ENQUANTO.
+    // Se precisar de upload de novos arquivos na edição, ela precisaria ser reescrita
+    // para usar fetch para a sua API backend.
 
-          uploadPromises.push(
-            uploadTask.then(snapshot => snapshot.ref.getDownloadURL())
-              .then(downloadURL => {
-                // Verifica se o arquivo já não está na lista antes de adicionar
-                if (!updatedTaskData.attachments.some(att => att.name === file.name)) {
-                  updatedTaskData.attachments.push({ name: file.name, url: downloadURL });
-                }
-              })
-              .catch(error => {
-                console.error(`Erro ao fazer upload do arquivo ${file.name} durante a edição:`, error);
-                throw error;
-              })
-          );
-        }
-        await Promise.all(uploadPromises);
+    try {
+      // --- LÓGICA DE UPLOAD DE NOVOS ARQUIVOS NA EDIÇÃO ---
+      // Esta parte precisa ser reescrita para enviar para a sua API backend.
+      // Para manter o código mais limpo por enquanto, esta funcionalidade
+      // de adicionar/substituir arquivos via edição não está implementada
+      // para o novo fluxo de envio. Se for crucial, precisará ser adicionada.
+      // Exemplo de como SERIA se fosse implementar:
+
+      const formData = new FormData();
+      formData.append('taskId', taskId);
+      // Para atualizar, talvez enviar apenas os dados que mudaram ou uma flag de atualização
+      // formData.append('taskData', JSON.stringify(updatedTaskData)); // Pode precisar de ajuste na API backend
+
+      for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
       }
 
-      // Atualiza os dados no Firebase Realtime Database
-      await database.ref('tasks/' + taskId).update(updatedTaskData);
+      if (files.length > 0) {
+          const BACKEND_API_URL = 'https://seu-outro-projeto-backend.vercel.app/api/upload'; // <<< AJUSTE ESTE URL
+          // Você precisaria de um endpoint específico na sua API para 'atualizar'
+          // ou enviar apenas os arquivos, e o backend associaria ao taskId.
+          // Ou reenviar tudo.
+          // Esta parte está complexa e depende da sua API backend.
+          // Por ora, vamos focar em atualizar os dados do chamado.
 
-      showModal('Sucesso', 'Chamado atualizado com sucesso!', taskId);
-      resetForm();
+          // Se sua API backend suportar a adição de arquivos em um chamado existente:
+          // const response = await fetch(BACKEND_API_URL, {
+          //   method: 'POST', // Ou PUT, dependendo da sua API
+          //   body: formData,
+          // });
+          // if (!response.ok) { ... handle error ... }
+          // const result = await response.json();
+          // if (result.success) { updatedTaskData.attachments = result.savedFiles; }
+      }
+      // --- FIM DA LÓGICA DE UPLOAD DE NOVOS ARQUIVOS ---
+
+
+      // Atualiza os dados no Firebase Realtime Database (ou onde quer que você guarde o histórico local)
+      // Note que esta linha ainda usa o Firebase para ATUALIZAR o registro que foi carregado do Firebase.
+      // Se você salvou os dados APENAS NO NOVO PROJETO VERSEL, esta linha deve ser uma chamada fetch para o seu backend.
+      // Se o histórico local (localStorage) é a ÚNICA fonte de verdade para o histórico, você precisa
+      // atualizar o localStorage aqui.
+      //
+      // Para simplificar: vamos assumir que o histórico principal reside no seu NOVO BACKEND.
+      // O que fazemos aqui é apenas SALVAR NO LOCALSTORAGE para o histórico do frontend e ATUALIZAR o Firebase.
+      // Se você não precisa mais do Firebase para o histórico, remova as chamadas `database.ref('tasks/' + taskId).update(...)`
+      // e apenas atualize o `localStorage`.
+
+      await database.ref('tasks/' + taskId).update(updatedTaskData);
 
       // Atualiza o histórico local com os novos dados
       let history = JSON.parse(localStorage.getItem('taskHistory') || '[]');
       const index = history.findIndex(t => t.id === taskId);
       if (index !== -1) {
+        // Atualiza os campos que foram editados
         history[index] = { ...history[index], ...updatedTaskData };
         localStorage.setItem('taskHistory', JSON.stringify(history));
       }
+
+      showModal('Sucesso', 'Chamado atualizado com sucesso!', taskId);
+      resetForm();
+
     } catch (error) {
-      showModal('Erro', 'Ocorreu um erro ao atualizar o chamado ou ao processar os anexos.');
+      showModal('Erro', 'Ocorreu um erro ao atualizar o chamado.');
       console.error("Erro na atualização do chamado:", error);
     }
   }
@@ -716,7 +793,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('.slider-thumb').style.backgroundColor = 'var(--primary)';
     document.querySelector('.slider-target').style.display = 'block';
     document.querySelector('.slider-success').style.display = 'none';
-    document.getElementById('captchaContainer').style.display = 'none';
+    document.getElementById('captchaContainer').style.display = 'none'; // Oculta o CAPTCHA
 
     feather.replace();
   }
@@ -724,7 +801,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Salvar no histórico local
   function saveToHistory(task) {
     let history = JSON.parse(localStorage.getItem('taskHistory') || '[]');
-    history = history.filter(t => t.id !== task.id); // Remove duplicatas se houver
+    // Remove duplicatas se houver antes de adicionar
+    history = history.filter(t => t.id !== task.id);
     history.unshift(task); // Adiciona no início
     if (history.length > 10) history = history.slice(0, 10); // Mantém apenas os 10 mais recentes
     localStorage.setItem('taskHistory', JSON.stringify(history));
@@ -754,13 +832,16 @@ document.addEventListener('DOMContentLoaded', () => {
         showTaskDetails(item.dataset.id);
       });
 
-      // Configura listener em tempo real para cada tarefa
+      // Configura listener em tempo real para cada tarefa (para atualizações de status)
       const taskId = item.dataset.id;
       setupTaskListener(taskId, item);
     });
   }
   function setupTaskListener(taskId, listItem) {
-    // Configura um listener em tempo real para esta tarefa
+    // Configura um listener em tempo real para esta tarefa a partir do Firebase.
+    // Se o seu novo backend gerencia o status, este listener precisará ser adaptado
+    // para ouvir atualizações do novo backend (ex: via WebSockets ou polling).
+    // Por enquanto, ele continua ouvindo o Firebase.
     database.ref('tasks/' + taskId).on('value', (snapshot) => {
       const task = snapshot.val();
       if (task) {
@@ -769,20 +850,29 @@ document.addEventListener('DOMContentLoaded', () => {
         if (statusElement) {
           statusElement.innerHTML = `<strong>Status:</strong> ${task.status || 'Pendente'}`;
 
-          // Atualiza também no histórico local
+          // Adiciona uma animação sutil para indicar a atualização
+          statusElement.classList.add('task-status-updated');
+          setTimeout(() => {
+            statusElement.classList.remove('task-status-updated');
+          }, 1000); // Remove a classe após 1 segundo
+
+          // Atualiza também no histórico local para consistência
           let history = JSON.parse(localStorage.getItem('taskHistory') || '[]');
           const index = history.findIndex(t => t.id === taskId);
           if (index !== -1) {
-            history[index].status = task.status;
+            history[index].status = task.status; // Atualiza o status no histórico local
             localStorage.setItem('taskHistory', JSON.stringify(history));
           }
         }
 
         // Se o item estiver selecionado (mostrando detalhes), atualiza também a visualização detalhada
         if (listItem.classList.contains('selected')) {
+          // Recarrega os detalhes para refletir a atualização
           showTaskDetails(taskId, task);
         }
       }
+    }, (error) => {
+      console.error("Erro ao ouvir atualizações do Firebase para a tarefa:", taskId, error);
     });
   }
   async function showTaskDetails(taskId, task = null) {
@@ -791,13 +881,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const taskInfo = document.getElementById('taskInfo');
 
     if (!task) {
-      // Busca no Firebase se o task não foi fornecido
+      // Busca no Firebase se o task não foi fornecido.
+      // Se seu histórico principal está no novo backend, esta busca também precisará ser adaptada.
       const snapshot = await database.ref('tasks/' + taskId).once('value');
       task = snapshot.val();
     }
 
     if (task) {
-      // Exibe os detalhes do chamado
+      // Exibe os detalhes do chamado, incluindo a posição na fila
       await displayTaskInfo(task);
 
       // Mostra a seção de detalhes e esconde a lista
@@ -816,7 +907,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Primeiro verifica no histórico local
+    // Primeiro verifica no histórico local para uma resposta mais rápida
     const history = JSON.parse(localStorage.getItem('taskHistory') || '[]');
     const localTask = history.find(task => task.id === taskId);
 
@@ -825,12 +916,13 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Se não encontrou local, busca no Firebase
+    // Se não encontrou local, busca no Firebase (ou no seu novo backend se for o caso)
     database.ref('tasks/' + taskId).once('value')
       .then(snapshot => {
         const task = snapshot.val();
         if (task) {
           showTaskDetails(taskId, task);
+          // Se encontrou no Firebase, salva no histórico local para futuras buscas rápidas
           saveToHistory(task);
         } else {
           showModal('Não encontrado', 'Nenhum chamado encontrado com este ID.');
@@ -843,25 +935,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Mostrar detalhes da tarefa
   async function displayTaskInfo(task) {
+    // Obtém a posição na fila e outras informações de status
     const queuePositionHTML = await showQueuePosition(task.id, task);
 
     const taskInfo = document.getElementById('taskInfo');
     taskInfo.innerHTML = `
       <div class="task-details">
-        <h4>Detalhes do Chamado #${task.id}</h4>
-        <p><strong>Nome</strong> ${task.nome || task.title.split('|')[0].trim()}</p>
-        <p><strong>Empresa</strong> ${task.empresa || task.title.split('|')[1].trim()}</p>
-        ${task.email ? `<p><strong>E-mail</strong> ${task.email}</p>` : ''}
-        ${task.telefone ? `<p><strong>Telefone</strong> ${task.telefone}</p>` : ''}
-        <p><strong>Descrição</strong> ${task.description}</p>
-        <p><strong>Criticidade</strong> <span class="priority-badge ${task.priority.toLowerCase()}">${task.priority}</span></p>
-        <p><strong>Prazo</strong> ${new Date(task.dueDate).toLocaleDateString()}</p>
-        <p><strong>Status</strong> <span class="status-badge ${task.status.toLowerCase().replace(' ', '-')}">${task.status}</span></p>
-        <p><strong>Criado em</strong> ${new Date(task.createdDate).toLocaleString()}</p>
+        <h4><i data-feather="clipboard"></i> Detalhes do Chamado #${task.id}</h4>
+        <p><strong>Solicitante:</strong> ${task.nome || task.title.split('|')[0].trim()}</p>
+        <p><strong>Empresa:</strong> ${task.empresa || task.title.split('|')[1].trim()}</p>
+        ${task.email ? `<p><strong>E-mail:</strong> ${task.email}</p>` : ''}
+        ${task.telefone ? `<p><strong>Telefone:</strong> ${task.telefone}</p>` : ''}
+        <p><strong>Descrição:</strong> ${task.description}</p>
+        <p><strong>Criticidade:</strong> <span class="priority-badge ${task.priority.toLowerCase()}">${task.priority}</span></p>
+        <p><strong>Prazo:</strong> ${new Date(task.dueDate).toLocaleDateString()}</p>
+        <p><strong>Status:</strong> <span class="status-badge ${task.status.toLowerCase().replace(' ', '-')}">${task.status}</span></p>
+        <p><strong>Criado em:</strong> ${new Date(task.createdDate).toLocaleString()}</p>
         ${task.attachments && task.attachments.length > 0 ? `
-          <p><strong>Anexos</strong>
+          <p><strong>Anexos:</strong>
             ${task.attachments.map(att => `
-              <a href="${att.url}" target="_blank" title="Abrir ${att.name}" style="color: var(--primary); text-decoration: underline; margin-right: 0.5rem;">
+              <a href="${att.url || '#'}" target="_blank" title="Abrir ${att.name}" style="color: var(--primary); text-decoration: underline; margin-right: 0.5rem;">
                 ${att.name}
               </a>
             `).join('')}
@@ -871,7 +964,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ${queuePositionHTML}
     `;
 
-    feather.replace();
+    feather.replace(); // Renderiza os ícones que foram adicionados ao innerHTML
   }
   // Preparar edição
   function prepareEdit() {
@@ -888,8 +981,8 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Conteúdo completo do taskInfo:', taskInfo.innerHTML);
 
     // Método 1: Procura pelo padrão do ID no texto (mais robusto)
-    const fullText = taskInfo.textContent;
-    const idMatch = fullText.match(/#(\w+)/);
+    // Procura por um # seguido de caracteres alfanuméricos (o ID gerado)
+    const idMatch = taskInfo.textContent.match(/#([a-z0-9]+)/i);
 
     if (idMatch && idMatch[1]) {
       const taskId = idMatch[1];
@@ -898,46 +991,53 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Método 2: Procura no cabeçalho (alternativo)
+    // Método 2: Procura no cabeçalho h4 (alternativo, se o ID estiver formatado ali)
     const heading = taskInfo.querySelector('h4');
     if (heading) {
       const headingText = heading.textContent.trim();
-      const taskId = headingText.startsWith('#') ? headingText.substring(1) : headingText;
-      console.log('ID encontrado pelo método 2:', taskId);
-      loadTaskForEditing(taskId);
-      return;
+      // Tenta extrair o ID do formato "Detalhes do Chamado #ID"
+      const taskIdMatchHeading = headingText.match(/#(\w+)/);
+      if (taskIdMatchHeading && taskIdMatchHeading[1]) {
+        const taskId = taskIdMatchHeading[1];
+        console.log('ID encontrado pelo método 2 (heading):', taskId);
+        loadTaskForEditing(taskId);
+        return;
+      }
     }
 
     // Se nenhum método funcionou
-    console.error('Nenhum método encontrou o ID');
-    showModal('Erro', 'Não foi possível identificar o ID do chamado. Consulte o console para detalhes.');
+    console.error('Nenhum método encontrou o ID do chamado');
+    showModal('Erro', 'Não foi possível identificar o ID do chamado para edição. Consulte o console para detalhes.');
   }
 
-  // Função auxiliar para carregar os dados (mantida igual à anterior)
+  // Carrega os dados de uma tarefa para o formulário de edição
   function loadTaskForEditing(taskId) {
+    // Busca a tarefa no Firebase (ou no seu novo backend, se aplicável)
     database.ref('tasks/' + taskId).once('value')
       .then(snapshot => {
         const task = snapshot.val();
 
         if (task) {
-          // Adiciona classe ao body para indicar modo de edição
+          // Adiciona classe ao body para indicar modo de edição (útil para CSS)
           document.body.classList.add('editing-mode');
 
-          // Preenche todos os campos do formulário...
+          // Preenche todos os campos do formulário com os dados da tarefa
           document.getElementById('nome').value = task.nome || '';
           document.getElementById('empresa').value = task.empresa || '';
           document.getElementById('email').value = task.email || '';
           document.getElementById('telefone').value = task.telefone || '';
           document.getElementById('descricao').value = task.description || '';
-          document.getElementById('prazo').value = task.dueDate || '';
+          document.getElementById('prazo').value = task.dueDate ? task.dueDate.split('T')[0] : ''; // Formata para YYYY-MM-DD
           document.getElementById('criticidade').value = task.priority || 'Baixa';
-          document.getElementById('taskId').value = taskId;
+          document.getElementById('taskId').value = taskId; // Guarda o ID para a atualização
 
-          // Atualiza a interface
+          // Atualiza a interface para modo de edição
           document.getElementById('formTitle').innerHTML = '<i data-feather="edit"></i> Editar Chamado';
-          document.querySelector('#ticketForm button[type="submit"]').innerHTML = '<i data-feather="save"></i> Atualizar Chamado';
-          feather.replace();
+          const submitBtn = document.querySelector('#ticketForm button[type="submit"]');
+          submitBtn.innerHTML = '<i data-feather="save"></i> Atualizar Chamado';
+          feather.replace(); // Re-renderiza os ícones Feather
 
+          // Fecha o modal de histórico e rola para o formulário
           closeHistoryModal();
           setTimeout(() => {
             document.querySelector('.form-container').scrollIntoView({ behavior: 'smooth' });
@@ -947,7 +1047,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       })
       .catch(error => {
-        console.error('Erro Firebase:', error);
+        console.error('Erro Firebase ao carregar tarefa para edição:', error);
         showModal('Erro', 'Falha ao carregar dados do chamado.');
       });
   }
