@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Abrir Chamado - TecnoISO</title>
+
+  <!-- Fonte e Ícones -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/feather-icons"></script>
+
+  <!-- Link para o arquivo CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <header>
+      <div class="logo">
+        <img src="https://www.tecnoiso.com/wp-content/uploads/2024/10/image006-Copia.png#409" alt="Logo TecnoISO">
+      </div>
+      <div class="header-actions" bis_skin_checked="1">
+        <button id="newTicketBtn" class="btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-plus"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Novo Chamado
+        </button>
+        <button id="historyBtn" class="btn btn-outline">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-list"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg> Meus Chamados
+        </button>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <aside class="sidebar">
+        <h2><i data-feather="help-circle"></i> Ajuda Rápida</h2>
+        <div class="faq-container">
+          <div class="faq-item">
+            <div class="faq-question">
+              <span>Não recebi meus certificados de calibração. O que pode ter ocorrido?</span>
+              <i data-feather="chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+              <p>Estamos migrando para a plataforma Arkmeds. Verifique seu e-mail cadastrado e siga as instruções enviadas por noreply@arkmeds.com.
+Se não recebeu o e-mail ou tiver dificuldades, entre em contato conosco.</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-question">
+              <span>Como acessar os certificados de calibração na plataforma Arkmeds?</span>
+              <i data-feather="chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+              <p>Acesse a aba "Certificados e Laudos", clique em "Certificados de Calibração" e, em seguida, em "Gerenciar Calibração".</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-question">
+              <span>Como cadastrar minha assinatura digital na plataforma Arkmeds?</span>
+              <i data-feather="chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+              <p>Clique na engrenagem de configurações, selecione "Perfil" e vá até a seção "Assinatura" para cadastrar sua assinatura digital.</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-question">
+              <span>Como assinar os certificados na plataforma Arkmeds?</span>
+              <i data-feather="chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+              <p>Acesse "Certificados e Laudos" > "Certificados de Calibração" > "Gerenciar Calibração".
+Marque os certificados, clique no ícone de lápis e selecione "Assinar como Solicitante".</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-question">
+              <span>Onde encontro os certificados dos padrões utilizados na calibração?</span>
+              <i data-feather="chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+              <p>Na plataforma Arkmeds, acesse "Certificados e Laudos" > "Certificados de Padrões" e clique no ícone de impressora para visualizar o certificado.</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-question">
+              <span>Por que a incerteza de medição aumentou em relação ao modelo anterior de certificado emitido?</span>
+              <i data-feather="chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+              <p>A incerteza aumentou porque o sistema Arkmeds usa uma metodologia mais completa, que inclui a resolução do equipamento. No modelo anterior de certificado, essa contribuição nem sempre era considerada, gerando valores menores.</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-question">
+              <span>Qual deve ser o erro admissível dos meus equipamentos?</span>
+              <i data-feather="chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+              <p>Recomendamos que o erro admissível seja, no mínimo, igual à resolução do equipamento. Entretanto, a definição do erro admissível cabe ao proprietário do equipamento, conforme o procedimento e a aplicação na empresa.</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-question">
+              <span>Posso editar um chamado após enviar?</span>
+              <i data-feather="chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+              <p>Sim, você pode editar chamados que ainda estão com status "Pendente" ou "Em Andamento" através da seção "Meus Chamados".</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <div class="content">
+        <div class="form-container">
+          <h2 id="formTitle"><i data-feather="plus-circle"></i> Abrir Novo Chamado</h2>
+          <div class="form-divider"></div>
+
+          <form id="ticketForm" enctype="multipart/form-data">
+            <div class="form-group">
+              <label for="nome"><i data-feather="user"></i> Nome Completo</label>
+              <input type="text" id="nome" class="form-control" required placeholder="Seu nome completo">
+            </div>
+
+            <div class="form-group">
+              <label for="empresa"><i data-feather="briefcase"></i> Empresa</label>
+              <input type="text" id="empresa" class="form-control" required placeholder="Nome da sua empresa">
+            </div>
+
+            <div class="form-group">
+              <label for="email"><i data-feather="mail"></i> E-mail</label>
+              <input type="email" id="email" class="form-control" placeholder="Seu e-mail corporativo">
+            </div>
+
+            <div class="form-group">
+              <label for="telefone"><i data-feather="phone"></i> Telefone</label>
+              <input type="tel" id="telefone" class="form-control" placeholder="Seu telefone com DDD">
+            </div>
+
+            <div class="form-group">
+              <p style="font-size: 0.85rem; color: #666; margin-top: -0.5rem;">
+                <i data-feather="info"></i> Preencha pelo menos um dos campos: e-mail ou telefone
+              </p>
+            </div>
+
+            <div class="form-group">
+              <label for="descricao"><i data-feather="file-text"></i> Descrição do Problema</label>
+              <textarea id="descricao" class="form-control" rows="4" required placeholder="Descreva detalhadamente o problema encontrado..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="prazo"><i data-feather="calendar"></i> Prazo Desejado</label>
+              <input type="date" id="prazo" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+              <label for="criticidade"><i data-feather="alert-triangle"></i> Nível de Criticidade</label>
+              <select id="criticidade" class="form-control" required>
+                <option value="">Selecione a criticidade...</option>
+                <option value="Alta">Alta (Impacto imediato nas operações)</option>
+                <option value="Média">Média (Impacto parcial nas operações)</option>
+                <option value="Baixa">Baixa (Sem impacto imediato)</option>
+              </select>
+            </div>
+
+            <!-- CAMPO DE UPLOAD DE ARQUIVOS -->
+            <div class="form-group">
+              <label for="arquivos"><i data-feather="paperclip"></i> Anexar Arquivos (Opcional)</label>
+              <input type="file" id="arquivos" class="form-control" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png,.jpeg">
+              <div id="fileListPreview" class="file-upload-preview"></div>
+            </div>
+
+            <input type="hidden" id="responsavel" value="Todos">
+            <input type="hidden" id="taskId" value="">
+            <div id="cooldownMessage" class="cooldown-message">
+              <p>Você só pode abrir um novo chamado a cada 10 minutos. Por favor, aguarde:</p>
+              <p class="cooldown-timer">Tempo restante: <span id="cooldownTimer">10:00</span></p>
+            </div>
+            <div id="captchaContainer" class="captcha-container">
+              <div class="slider-text">Deslize para a direita para verificar que você não é um robô</div>
+              <div class="slider-captcha">
+                <div class="slider-track">
+                  <div class="slider-progress"></div>
+                  <div class="slider-thumb"></div>
+                  <div class="slider-target">→ Deslize até aqui</div>
+                </div>
+              </div>
+              <div class="slider-success">
+                <i data-feather="check-circle"></i> Verificação concluída!
+              </div>
+            </div>
+            <button type="submit" class="btn">
+              <i data-feather="send"></i> Enviar Chamado
+            </button>
+          </form>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <div class="footer-content">
+        <p>© 2024 TecnoISO - Todos os direitos reservados</p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Modal de Histórico -->
+  <div id="historyModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i data-feather="list"></i> Meus Chamados</h3>
+      </div>
+      <div class="modal-body">
+        <div class="search-box">
+          <input type="text" id="searchId" placeholder="Digite o ID do chamado">
+          <button id="searchBtn" class="btn">Buscar</button>
+        </div>
+
+        <div id="localHistory">
+          <h4>Histórico Recente</h4>
+          <div class="task-history-container">
+            <div id="tasksList" class="task-history"></div>
+          </div>
+        </div>
+        <div id="taskDetails" style="display: none;">
+          <h4>Detalhes do Chamado</h4>
+          <div id="taskInfo" class="task-info"></div>
+          <div class="modal-footer">
+            <button id="backBtn" class="btn btn-outline">
+              <i data-feather="arrow-left"></i> Voltar
+            </button>
+            <button id="editBtn" class="btn">
+              <i data-feather="edit"></i> Editar
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="closeHistoryBtn" class="btn btn-outline"> Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Confirmação -->
+  <div id="confirmationModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle"></h3>
+      </div>
+      <div class="modal-body">
+        <p id="modalMessage"></p>
+      </div>
+      <div class="modal-footer">
+        <button id="modalButton" class="btn">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preloader -->
+  <div id="preloader">
+    <div class="loader-logo">
+      <img src="https://www.tecnoiso.com/wp-content/uploads/2024/10/image006-Copia.png#409" alt="Carregando...">
+    </div>
+  </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-storage-compat.js"></script>
+
+  <!-- Link para o arquivo JavaScript -->
+  <script src="script.js"></script>
+</body>
+</html>
